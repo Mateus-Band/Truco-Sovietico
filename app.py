@@ -114,5 +114,4 @@ def placar():
 
 # --- Inicializa servidor ---
 if __name__ == '__main__':
-    reiniciar_rodada()
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=10000)
