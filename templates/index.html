@@ -8,10 +8,12 @@
     :root {
       --vermelho: #b30000;
       --vermelho-escuro: #8c0000;
+      --preto: #333333;
+      --cinza-escuro: #555555;
       --branco: #ffffff;
       --cinza-claro: #f2f2f2;
       --cinza: #e6e6e6;
-      --cinza-escuro: #cccccc;
+      --cinza-medio: #cccccc;
     }
     
     body {
@@ -20,7 +22,7 @@
       padding: 20px;
       max-width: 800px;
       margin: 0 auto;
-      color: #333;
+      color: var(--preto);
     }
 
     h1 {
@@ -40,7 +42,7 @@
     #cartas-container {
       margin: 20px 0;
       min-height: 80px;
-      border: 2px dashed var(--cinza-escuro);
+      border: 2px dashed var(--cinza-medio);
       border-radius: 8px;
       padding: 15px;
       background-color: var(--branco);
@@ -64,22 +66,33 @@
     button {
       padding: 12px 24px;
       font-size: 1em;
-      background-color: var(--vermelho);
       color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
       transition: all 0.3s;
       font-weight: bold;
+      min-width: 120px;
     }
 
-    button:hover {
+    #btnIniciar {
+      background-color: var(--vermelho);
+    }
+
+    #btnIniciar:hover {
       background-color: var(--vermelho-escuro);
-      transform: translateY(-2px);
+    }
+
+    #btnResetar {
+      background-color: var(--preto);
+    }
+
+    #btnResetar:hover {
+      background-color: var(--cinza-escuro);
     }
 
     button:disabled {
-      background-color: var(--cinza-escuro);
+      background-color: var(--cinza-medio);
       cursor: not-allowed;
       transform: none;
     }
@@ -115,7 +128,9 @@
     }
 
     .iniciar-container {
-      text-align: center;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
       margin: 20px 0;
     }
 
@@ -125,8 +140,13 @@
         align-items: center;
       }
       
+      .iniciar-container {
+        flex-direction: column;
+        align-items: center;
+      }
+      
       button {
-        width: 80%;
+        width: 100%;
         margin: 5px 0;
       }
     }
@@ -138,6 +158,7 @@
     
     <div class="iniciar-container">
       <button id="btnIniciar">Iniciar Jogo</button>
+      <button id="btnResetar" disabled>Resetar Jogo</button>
     </div>
     
     <div id="cartas-container">
@@ -168,6 +189,7 @@
     const placarTime2El = document.getElementById('placarTime2');
     const vezEl = document.getElementById('vez');
     const btnIniciar = document.getElementById('btnIniciar');
+    const btnResetar = document.getElementById('btnResetar');
     const btnCarta1 = document.getElementById('btnCarta1');
     const btnCarta2 = document.getElementById('btnCarta2');
     const btnCarta3 = document.getElementById('btnCarta3');
@@ -221,8 +243,9 @@
         placarTime2El.textContent = `Time 2: ${dataPlacar.time2}`;
         vezEl.textContent = `Rodada: ${dataPlacar.rodada}${dataCartas.vez ? ` - Vez: Jogador ${dataCartas.vez}` : ''}`;
         
-        // Atualiza botão de iniciar
+        // Atualiza botões de controle
         btnIniciar.disabled = jogoAtivo;
+        btnResetar.disabled = !jogoAtivo;
         btnIniciar.textContent = jogoAtivo ? 'Jogo em Andamento' : 'Iniciar Jogo';
         
         // Atualiza botões de carta
@@ -253,6 +276,24 @@
       }
     }
     
+    async function resetarJogo() {
+      try {
+        const res = await fetch('/resetar', {
+          method: 'POST'
+        });
+        
+        if (!res.ok) throw new Error('Erro ao resetar jogo');
+        
+        const data = await res.json();
+        mensagemEl.textContent = data.mensagem;
+        await carregarEstado();
+        
+      } catch (error) {
+        console.error('Erro:', error);
+        mensagemEl.textContent = 'Falha ao resetar o jogo. Tente novamente.';
+      }
+    }
+    
     async function jogar(indice) {
       try {
         const res = await fetch(`/jogar/${indice}`, {
@@ -273,6 +314,7 @@
     
     // Event Listeners
     btnIniciar.addEventListener('click', iniciarJogo);
+    btnResetar.addEventListener('click', resetarJogo);
     
     // Inicialização
     carregarEstado();
