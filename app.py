@@ -3,6 +3,10 @@ import random
 
 app = Flask(__name__)
 
+@app.route('/')
+def index():
+    return render_template('index.html')
+
 # --- Definições do jogo ---
 nomes_cartas = {
     0: "Porcão", 1: "Q", 2: "J", 3: "K", 4: "A", 5: "2", 6: "3",
