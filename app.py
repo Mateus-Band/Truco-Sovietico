@@ -41,7 +41,7 @@ def distribuir():
             if game_state['cartas_disponiveis']:
                 p.append(game_state['cartas_disponiveis'].pop())
 
-def reiniciar_rodada():
+def reiniciar_jogo_completo():
     with app_lock:
         resetar_cartas()
         distribuir()
@@ -85,18 +85,17 @@ def jogar(indice):
             game_state['vez'] = 0
             game_state['mesa'] = []
             
-            # Redistribui cartas se o jogo não terminou
             if game_state['ti1'] < 2 and game_state['ti2'] < 2:
                 resetar_cartas()
                 distribuir()
 
         if game_state['ti1'] == 2:
             resultado = "Time 1 venceu a rodada!"
-            reiniciar_rodada()
+            reiniciar_jogo_completo()
             return resultado
         elif game_state['ti2'] == 2:
             resultado = "Time 2 venceu a rodada!"
-            reiniciar_rodada()
+            reiniciar_jogo_completo()
             return resultado
         
         return "Carta jogada com sucesso!"
@@ -125,8 +124,13 @@ def jogar_carta(indice):
 
 @app.route('/iniciar', methods=['POST'])
 def iniciar():
-    reiniciar_rodada()
+    reiniciar_jogo_completo()
     return jsonify(mensagem="Jogo iniciado!", status="sucesso")
+
+@app.route('/resetar', methods=['POST'])
+def resetar():
+    reiniciar_jogo_completo()
+    return jsonify(mensagem="Jogo resetado com sucesso!", status="sucesso")
 
 @app.route('/placar')
 def placar():
@@ -136,10 +140,6 @@ def placar():
         rodada=game_state['rodada_atual'],
         jogo_iniciado=game_state['jogo_iniciado']
     )
-
-@app.route('/status')
-def status():
-    return jsonify(game_state)
 
 # --- Inicialização ---
 if __name__ == '__main__':
