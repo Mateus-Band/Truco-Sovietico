@@ -43,13 +43,19 @@ def distribuir():
 
 def reiniciar_jogo_completo():
     with app_lock:
-        resetar_cartas()
-        distribuir()
+        # Reseta todo o estado do jogo
+        game_state['cartas_disponiveis'] = []
+        game_state['jogadores'] = [[] for _ in range(4)]
         game_state['mesa'] = []
         game_state['vez'] = 0
         game_state['ti1'] = 0
         game_state['ti2'] = 0
         game_state['rodada_atual'] = 1
+        game_state['jogo_iniciado'] = False
+        
+        # Prepara um novo jogo
+        resetar_cartas()
+        distribuir()
         game_state['jogo_iniciado'] = True
 
 def determinar_ganhador():
@@ -129,8 +135,22 @@ def iniciar():
 
 @app.route('/resetar', methods=['POST'])
 def resetar():
-    reiniciar_jogo_completo()
-    return jsonify(mensagem="Jogo resetado com sucesso!", status="sucesso")
+    try:
+        reiniciar_jogo_completo()
+        return jsonify({
+            "mensagem": "Jogo resetado com sucesso!",
+            "status": "sucesso",
+            "placar": {
+                "time1": 0,
+                "time2": 0,
+                "rodada": 1
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            "mensagem": f"Erro ao resetar jogo: {str(e)}",
+            "status": "erro"
+        }), 500
 
 @app.route('/placar')
 def placar():
@@ -140,6 +160,10 @@ def placar():
         rodada=game_state['rodada_atual'],
         jogo_iniciado=game_state['jogo_iniciado']
     )
+
+@app.route('/status')
+def status():
+    return jsonify(game_state)
 
 # --- Inicialização ---
 if __name__ == '__main__':
