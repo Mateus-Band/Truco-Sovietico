@@ -1,6 +1,5 @@
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request
 import random
-import os
 from threading import Lock
 
 app = Flask(__name__)
@@ -34,29 +33,36 @@ def resetar_cartas():
     random.shuffle(game_state['cartas_disponiveis'])
 
 def distribuir():
+    """Distribui 3 cartas para cada jogador"""
     for p in game_state['jogadores']:
         p.clear()
-    for _ in range(3):
-        for p in game_state['jogadores']:
+        for _ in range(3):
             if game_state['cartas_disponiveis']:
                 p.append(game_state['cartas_disponiveis'].pop())
 
-def reiniciar_jogo_completo():
+def reiniciar_rodada():
+    """Reinicia completamente uma nova rodada"""
     with app_lock:
-        # Reseta todo o estado do jogo
-        game_state['cartas_disponiveis'] = []
-        game_state['jogadores'] = [[] for _ in range(4)]
+        resetar_cartas()
+        distribuir()
         game_state['mesa'] = []
         game_state['vez'] = 0
         game_state['ti1'] = 0
         game_state['ti2'] = 0
         game_state['rodada_atual'] = 1
-        game_state['jogo_iniciado'] = False
-        
-        # Prepara um novo jogo
-        resetar_cartas()
-        distribuir()
         game_state['jogo_iniciado'] = True
+
+def iniciar_novo_turno():
+    """Prepara um novo turno dentro da mesma rodada"""
+    with app_lock:
+        game_state['mesa'] = []
+        game_state['vez'] = 0
+        # Não resetamos o placar ou rodada aqui
+        if len(game_state['cartas_disponiveis']) >= 12:  # Tem cartas suficientes?
+            distribuir()
+        else:
+            resetar_cartas()
+            distribuir()
 
 def determinar_ganhador():
     valores = [c for _, c in game_state['mesa']]
@@ -71,15 +77,17 @@ def jogar(indice):
             return "Jogo não iniciado. Clique em Iniciar Jogo."
         
         if game_state['vez'] > 3:
-            return "Aguardando nova rodada."
+            return "Aguardando novo turno."
         
         if indice < 0 or indice >= len(game_state['jogadores'][game_state['vez']]):
             return "Índice de carta inválido."
         
+        # Jogador joga uma carta
         carta = game_state['jogadores'][game_state['vez']].pop(indice)
         game_state['mesa'].append((game_state['vez'], carta))
         game_state['vez'] += 1
 
+        # Verifica se todos jogaram
         if game_state['vez'] == 4:
             ganhador = determinar_ganhador()
             if ganhador in [0, 2]:
@@ -87,37 +95,27 @@ def jogar(indice):
             else:
                 game_state['ti2'] += 1
             
-            game_state['rodada_atual'] += 1
-            game_state['vez'] = 0
-            game_state['mesa'] = []
+            # Verifica se alguém ganhou a rodada
+            if game_state['ti1'] >= 2 or game_state['ti2'] >= 2:
+                resultado = f"Time {1 if game_state['ti1'] >= 2 else 2} venceu a rodada!"
+                reiniciar_rodada()
+                return resultado
             
-            if game_state['ti1'] < 2 and game_state['ti2'] < 2:
-                resetar_cartas()
-                distribuir()
-
-        if game_state['ti1'] == 2:
-            resultado = "Time 1 venceu a rodada!"
-            reiniciar_jogo_completo()
-            return resultado
-        elif game_state['ti2'] == 2:
-            resultado = "Time 2 venceu a rodada!"
-            reiniciar_jogo_completo()
-            return resultado
+            # Prepara novo turno
+            game_state['rodada_atual'] += 1
+            iniciar_novo_turno()
+            return "Novo turno iniciado!"
         
         return "Carta jogada com sucesso!"
 
 # --- Rotas da API ---
-@app.route('/')
-def home():
-    return render_template('index.html')
-
 @app.route('/cartas')
 def get_cartas():
     if not game_state['jogo_iniciado']:
         return jsonify(cartas=["Jogo não iniciado"], status="aguardando")
     
     if game_state['vez'] > 3:
-        return jsonify(cartas=["Aguardando próxima rodada"], status="espera")
+        return jsonify(cartas=["Aguardando novo turno"], status="espera")
     
     cartas = game_state['jogadores'][game_state['vez']]
     nomes = [nomes_cartas[c] for c in cartas]
@@ -125,32 +123,20 @@ def get_cartas():
 
 @app.route('/jogar/<int:indice>', methods=['POST'])
 def jogar_carta(indice):
+    if game_state['vez'] > 3 or indice < 0 or indice >= len(game_state['jogadores'][game_state['vez']]):
+        return jsonify(resultado="Jogada inválida.")
     resultado = jogar(indice)
     return jsonify(resultado=resultado)
 
 @app.route('/iniciar', methods=['POST'])
 def iniciar():
-    reiniciar_jogo_completo()
+    reiniciar_rodada()
     return jsonify(mensagem="Jogo iniciado!", status="sucesso")
 
 @app.route('/resetar', methods=['POST'])
 def resetar():
-    try:
-        reiniciar_jogo_completo()
-        return jsonify({
-            "mensagem": "Jogo resetado com sucesso!",
-            "status": "sucesso",
-            "placar": {
-                "time1": 0,
-                "time2": 0,
-                "rodada": 1
-            }
-        })
-    except Exception as e:
-        return jsonify({
-            "mensagem": f"Erro ao resetar jogo: {str(e)}",
-            "status": "erro"
-        }), 500
+    reiniciar_rodada()
+    return jsonify(mensagem="Jogo resetado com sucesso!", status="sucesso")
 
 @app.route('/placar')
 def placar():
@@ -161,11 +147,5 @@ def placar():
         jogo_iniciado=game_state['jogo_iniciado']
     )
 
-@app.route('/status')
-def status():
-    return jsonify(game_state)
-
-# --- Inicialização ---
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 10000))
-    app.run(debug=False, host='0.0.0.0', port=port)
+    app.run(debug=True)
