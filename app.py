@@ -1,10 +1,10 @@
 from flask import Flask, jsonify, request
 import random
+import os
 from threading import Lock
 
 app = Flask(__name__)
 app_lock = Lock()
-
 # --- Definições do jogo ---
 nomes_cartas = {
     0: "Porcão", 1: "Q", 2: "J", 3: "K", 4: "A", 5: "2", 6: "3",
@@ -148,4 +148,5 @@ def placar():
     )
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port, debug=False)
