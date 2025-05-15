@@ -8,6 +8,7 @@
     :root {
       --vermelho: #b30000;
       --vermelho-escuro: #8c0000;
+      --vermelho-claro: #ff3333;
       --preto: #333333;
       --cinza-escuro: #555555;
       --branco: #ffffff;
@@ -75,6 +76,7 @@
       min-width: 120px;
     }
 
+    /* Botão Iniciar */
     #btnIniciar {
       background-color: var(--vermelho);
     }
@@ -83,12 +85,22 @@
       background-color: var(--vermelho-escuro);
     }
 
+    /* Botão Resetar */
     #btnResetar {
       background-color: var(--preto);
     }
 
     #btnResetar:hover {
       background-color: var(--cinza-escuro);
+    }
+
+    /* Botões de Carta (agora vermelhos) */
+    #btnCarta1, #btnCarta2, #btnCarta3 {
+      background-color: var(--vermelho);
+    }
+
+    #btnCarta1:hover, #btnCarta2:hover, #btnCarta3:hover {
+      background-color: var(--vermelho-escuro);
     }
 
     button:disabled {
